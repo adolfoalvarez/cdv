@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Data preparation</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Adolfo Alvarez - Collegium Da Vinci" />
+    <meta name="date" content="2020-11-09" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Data preparation
+### Adolfo Alvarez - Collegium Da Vinci
+### 2020-11-09
+
+---
+
+class: center, middle
+
+
+
+# Introduction
+
+---
+class: center, middle, inverse
+
+# Disclaimer: Today I will show ONE way to solve data preparation tasks, and hopefully I will point you to alternatives. 
+
+---
+class: center, middle, inverse
+
+#This way (tidyverse) is not the only one, and not necesarily the fastest, or the best for your own needs or preferences. One of the big advantages of R is that you can choose the "flavor" that suits you better.
+
+---
+class: center, middle
+
+# Data preparation is the art of getting your data (into R) in a useful form for visualization and modeling.
+
+---
+background-image: url(img/start.gif)
+
+---
+# The three basic steps of data preparation
+
+- Import 
+- Tidy
+- Transform
+
+---
+background-image: url(img/tidyverse.png)
+background-size: 910px
+class: center, middle
+
+# Tidyverse!
+
+---
+# The three basic steps of data preparation
+
+- Import (readr, readxl, haven)
+- Tidy (tidyr)
+- Transform (dplyr)
+
+---
+# Other members of the tidyverse
+
+- Visualization (ggplot2)
+- Import (jsonlite, xml2, httr, rvest, DBI)
+- Transform (stringr, forcats, lubridate, hms, blob)
+- Program (purrr, magrittr, glue)
+
+---
+&lt;iframe width="560" height="315" src="https://www.tidyverse.org/packages/" frameBorder="0"&gt;&lt;/iframe&gt;
+
+---
+Then first step is:
+
+```r
+library(tidyverse)
+```
+
+---
+class: center, middle, inverse
+
+#Introduction to tidy data
+
+---
+background-image: url(img/notidy1.jpg)
+
+---
+#Tidy data
+There are three interrelated rules that make a data set tidy:
+- Each variable must have its own column
+- Each observation must have its own row
+- Each value must have its own cell
+
+---
+# Two things we will use across all our workshop:
+.pull-left[
+![Image](img/magrittr.png)
+]
+
+.pull-right[
+![Image](img/tibble.png)
+]
+
+---
+# The %&gt;% pipe
+
+## Basic piping
+
+  * `x %&gt;% f` is equivalent to `f(x)`
+  * `x %&gt;% f(y)` is equivalent to `f(x, y)`
+  * `x %&gt;% f %&gt;% g %&gt;% h` is equivalent to `h(g(f(x)))`
+
+### The argument placeholder
+
+ * `x %&gt;% f(y, .)` is equivalent to `f(y, x)`
+ * `x %&gt;% f(y, z = .)` is equivalent to `f(y, z = x)`
+
+---
+# The %&gt;% pipe
+## Example
+
+```r
+colMeans(subset(iris, Species == "setosa", select= -Species))
+```
+
+```
+## Sepal.Length  Sepal.Width Petal.Length  Petal.Width 
+##        5.006        3.428        1.462        0.246
+```
+
+```r
+iris %&gt;% 
+  subset(Species == "setosa", select = -Species ) %&gt;% 
+  colMeans()
+```
+
+```
+## Sepal.Length  Sepal.Width Petal.Length  Petal.Width 
+##        5.006        3.428        1.462        0.246
+```
+
+---
+#The %&gt;% pipe
+
+- And one more reminder: Rstudio shortcut for the pipe is Ctrl+Shift+M
+- Check more shortcuts at Tools -&gt; Keyboard Shortcuts Help.
+
+---
+#Tibbles: A (new) way to organize data in R
+
+### It never changes an input's type (i.e., no more `stringsAsFactors = FALSE`!).
+    
+
+```r
+tibble(x = letters)
+```
+
+```
+## # A tibble: 26 x 1
+##    x    
+##    &lt;chr&gt;
+##  1 a    
+##  2 b    
+##  3 c    
+##  4 d    
+##  5 e    
+##  6 f    
+##  7 g    
+##  8 h    
+##  9 i    
+## 10 j    
+## # … with 16 more rows
+```
+    
+---
+### This makes it easier to use with list-columns:
+    
+
+```r
+tibble(x = 1:3, y = list(1:5, 1:10, 1:20))
+```
+
+```
+## # A tibble: 3 x 2
+##       x y         
+##   &lt;int&gt; &lt;list&gt;    
+## 1     1 &lt;int [5]&gt; 
+## 2     2 &lt;int [10]&gt;
+## 3     3 &lt;int [20]&gt;
+```
+
+---
+### It never adjusts the names of variables:
+  
+
+```r
+names(data.frame(`crazy name` = 1))
+```
+
+```
+## [1] "crazy.name"
+```
+
+```r
+names(tibble(`crazy name` = 1))
+```
+
+```
+## [1] "crazy name"
+```
+
+---
+### It evaluates its arguments lazily and sequentially:
+  
+
+```r
+tibble(x = 1:5, y = x ^ 2)
+```
+
+```
+## # A tibble: 5 x 2
+##       x     y
+##   &lt;int&gt; &lt;dbl&gt;
+## 1     1     1
+## 2     2     4
+## 3     3     9
+## 4     4    16
+## 5     5    25
+```
+
+  * It never uses `row.names()`. The whole point of tidy data is to 
+    store variables in a consistent way. So it never stores a variable as 
+    special attribute.
+  
+  * It only recycles vectors of length 1. This is because recycling vectors of greater lengths 
+    is a frequent source of bugs.
+
+---
+# Tibbles vs data frames
+
+The key differences between tibbles and data frames are: printing, subsetting, and recycling rules.
+
+---
+## Printing
+When you print a tibble, it only shows the first ten rows and all the columns that fit on one screen. It also prints an abbreviated description of the column type:
+    
+
+```r
+tibble(x = 1:1000, y = rep("a", 1000), z = sample(c(T,F),1000, rep=T))
+```
+
+```
+## # A tibble: 1,000 x 3
+##        x y     z    
+##    &lt;int&gt; &lt;chr&gt; &lt;lgl&gt;
+##  1     1 a     TRUE 
+##  2     2 a     FALSE
+##  3     3 a     TRUE 
+##  4     4 a     FALSE
+##  5     5 a     FALSE
+##  6     6 a     TRUE 
+##  7     7 a     TRUE 
+##  8     8 a     FALSE
+##  9     9 a     TRUE 
+## 10    10 a     TRUE 
+## # … with 990 more rows
+```
+
+---
+## Subsetting
+
+Tibbles are quite strict about subsetting. `[` always returns another tibble. Contrast this with a data frame: sometimes `[` returns a data frame and sometimes it just returns a vector:
+    
+
+```r
+df1 &lt;- data.frame(x = 1:3, y = 3:1)
+class(df1[, 1:2])
+```
+
+```
+## [1] "data.frame"
+```
+
+```r
+class(df1[, 1])
+```
+
+```
+## [1] "integer"
+```
+
+```r
+df2 &lt;- tibble(x = 1:3, y = 3:1)
+class(df2[, 1:2])
+```
+
+```
+## [1] "tbl_df"     "tbl"        "data.frame"
+```
+
+```r
+class(df2[, 1])
+```
+
+```
+## [1] "tbl_df"     "tbl"        "data.frame"
+```
+
+---
+To extract a single column use `[[` or `$`:
+
+
+```r
+class(df2[[1]])
+```
+
+```
+## [1] "integer"
+```
+
+```r
+class(df2$x)
+```
+
+```
+## [1] "integer"
+```
+
+Tibbles are also stricter with `$`. Tibbles never do partial matching, and will throw a warning and return `NULL` if the column does not exist:
+
+
+```r
+df &lt;- data.frame(abc = 1)
+df$a
+```
+
+```
+## [1] 1
+```
+
+```r
+df2 &lt;- tibble(abc = 1)
+df2$a
+```
+
+```
+## Warning: Unknown or uninitialised column: `a`.
+```
+
+```
+## NULL
+```
+
+---
+## Recycling
+
+When constructing a tibble, only values of length 1 are recycled.  The first column with length different to one determines the number of rows in the tibble, conflicts lead to an error. 
+
+
+```r
+tibble(a = 1, b = 1:3)
+```
+
+```
+## # A tibble: 3 x 2
+##       a     b
+##   &lt;dbl&gt; &lt;int&gt;
+## 1     1     1
+## 2     1     2
+## 3     1     3
+```
+
+```r
+tibble(a = 1:3, b = 1)
+```
+
+```
+## # A tibble: 3 x 2
+##       a     b
+##   &lt;int&gt; &lt;dbl&gt;
+## 1     1     1
+## 2     2     1
+## 3     3     1
+```
+
+```r
+tibble(a = 1:3, c = 1:2)
+```
+
+```
+## Error: Tibble columns must have compatible sizes.
+## * Size 3: Existing data.
+## * Size 2: Column `c`.
+## ℹ Only values of size one are recycled.
+```
+
+```r
+tibble(a = 1, b = integer())
+```
+
+```
+## # A tibble: 0 x 2
+## # … with 2 variables: a &lt;dbl&gt;, b &lt;int&gt;
+```
+
+```r
+tibble(a = integer(), b = 1)
+```
+
+```
+## # A tibble: 0 x 2
+## # … with 2 variables: a &lt;int&gt;, b &lt;dbl&gt;
+```
+---
+## Recycling
+
+This also extends to tibbles with *zero* rows, which is sometimes important for programming:
+
+```r
+tibble(a = 1, b = integer())
+```
+
+```
+## # A tibble: 0 x 2
+## # … with 2 variables: a &lt;dbl&gt;, b &lt;int&gt;
+```
+
+```r
+tibble(a = integer(), b = 1)
+```
+
+```
+## # A tibble: 0 x 2
+## # … with 2 variables: a &lt;int&gt;, b &lt;dbl&gt;
+```
+
+---
+class: center, middle, inverse
+
+# Data import!
+
+---
+# Three main packages of tidyverse for importing data
+
+- [readr](https://github.com/hadley/readr): delimited files
+- [readxl](https://github.com/hadley/readxl): Excel files (.xls and .xlsx)
+- [haven](https://github.com/hadley/haven): SPSS, Stata, SAS
+
+Some advantages:
+
+- Faster than alternatives
+- StringsAsFactors=FALSE by default.
+- Save the results as a tibble object.
+
+---
+# Reading data: readr
+
+The goal of readr is to provide a fast and friendly way to read rectangular data (like csv, tsv, and fwf)
+
+readr supports seven file formats with seven read_ functions:
+
+- read_csv(): comma separated (CSV) files
+- read_tsv(): tab separated files
+- read_delim(): general delimited files
+- read_fwf(): fixed width files
+- read_table(): tabular files where colums are separated by white-space.
+- read_log(): web log files
+
+An special case of read_delim is read_csv2() which uses ; for separators instead of ,.
+
+---
+# Reading data: readr
+
+```r
+#Example 
+#data with wine evaluations
+library(readr)
+data &lt;- read_csv("data/winemag-data-130k-v2.csv")
+```
+
+```
+## Warning: Missing column names filled in: 'X1' [1]
+```
+
+```
+## Parsed with column specification:
+## cols(
+##   X1 = col_double(),
+##   country = col_character(),
+##   description = col_character(),
+##   designation = col_character(),
+##   points = col_double(),
+##   price = col_double(),
+##   province = col_character(),
+##   region_1 = col_character(),
+##   region_2 = col_character(),
+##   taster_name = col_character(),
+##   taster_twitter_handle = col_character(),
+##   title = col_character(),
+##   variety = col_character(),
+##   winery = col_character()
+## )
+```
+
+```r
+data
+```
+
+```
+## # A tibble: 129,971 x 14
+##       X1 country description designation points price province region_1 region_2
+##    &lt;dbl&gt; &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;   
+##  1     0 Italy   Aromas inc… Vulkà Bian…     87    NA Sicily … Etna     &lt;NA&gt;    
+##  2     1 Portug… This is ri… Avidagos        87    15 Douro    &lt;NA&gt;     &lt;NA&gt;    
+##  3     2 US      Tart and s… &lt;NA&gt;            87    14 Oregon   Willame… Willame…
+##  4     3 US      Pineapple … Reserve La…     87    13 Michigan Lake Mi… &lt;NA&gt;    
+##  5     4 US      Much like … Vintner's …     87    65 Oregon   Willame… Willame…
+##  6     5 Spain   Blackberry… Ars In Vit…     87    15 Norther… Navarra  &lt;NA&gt;    
+##  7     6 Italy   Here's a b… Belsito         87    16 Sicily … Vittoria &lt;NA&gt;    
+##  8     7 France  This dry a… &lt;NA&gt;            87    24 Alsace   Alsace   &lt;NA&gt;    
+##  9     8 Germany Savory dri… Shine           87    12 Rheinhe… &lt;NA&gt;     &lt;NA&gt;    
+## 10     9 France  This has g… Les Natures     87    27 Alsace   Alsace   &lt;NA&gt;    
+## # … with 129,961 more rows, and 5 more variables: taster_name &lt;chr&gt;,
+## #   taster_twitter_handle &lt;chr&gt;, title &lt;chr&gt;, variety &lt;chr&gt;, winery &lt;chr&gt;
+```
+
+---
+# Reading data: readxl
+
+## Features
+
+* No external dependency on, e.g., Java or Perl.
+
+* Re-encodes non-ASCII characters to UTF-8.
+
+* Loads datetimes into POSIXct columns. Both Windows (1900) and Mac (1904) 
+  date specifications are processed correctly.
+
+* Discovers the minimal data rectangle and returns that, by default. User can exert more control with `range`, `skip`, and `n_max`.
+
+* Column names and types are determined from the data in the sheet, by default. User can also supply via `col_names` and `col_types`.
+
+* Returns a [tibble](http://tibble.tidyverse.org/reference/tibble.html), i.e. a data frame with an additional `tbl_df` class. Among other things, this provide nicer printing.
+
+---
+# Other relevant packages
+
+Here are some other packages with functionality that is complementary to readxl and that also avoid a Java dependency.
+
+* [openxlsx](https://CRAN.R-project.org/package=openxlsx) provides "a high level interface to writing, styling and editing worksheets".
+
+
+```r
+l &lt;- list(iris = iris, mtcars = mtcars, chickwts = chickwts, quakes = quakes)
+openxlsx::write.xlsx(l, file = "datasets.xlsx")
+```
+
+* [writexl](https://cran.r-project.org/package=writexl) It's a portable and lightweight way to export a data frame to xlsx, based on [libxlsxwriter](https://github.com/jmcnamara/libxlsxwriter). It is much more minimalistic than openxlsx, but on simple examples, appears to be about twice as fast and to write smaller files.
+
+* [tidyxl](https://cran.r-project.org/package=tidyxl) is focused on importing awkward and non-tabular data from Excel. It also "exposes cell content, position and formatting in a tidy structure for further manipulation".
+
+---
+class: center, middle, inverse
+
+# Data transformation
+
+---
+background-image: url(img/dplyr.jpg)
+
+---
+## Data manipulation with dplyr
+
+Following dplyr's github page, its main goals are:
+
+- Identify the most important data manipulation tools needed for data analysis and make them easy to use in R.
+
+- Provide blazing fast performance for in-memory data by writing key pieces of code in C++.
+
+- Use the same code interface to work with data no matter where it's stored, whether in a data frame, a data table or database.
+
+---
+## Support
+
+The key object in dplyr is a tibble, a representation of a tabular data structure. Currently dplyr supports:
+
+- tibbles
+- data frames
+- data tables
+- SQLite
+- PostgreSQL/Redshift
+- MySQL/MariaDB
+- Bigquery
+- MonetDB
+- Presto
+- data cubes with arrays (partial implementation)
+
+---
+## The main verbs
+
+- `select()`: selects a subset of variables
+- `filter()`: selects a subset of observations
+- `mutate()`: adds new variables
+- `summarise()`: reduces a group(s) to a smaller number of values (e.g., summary statistics)
+- `arrange()`: re-orders observations
+
+
+## Special cases
+- `rename()`: similar to `select()` but keeps all columns that you didn’t specifically mention
+- `transmute()`: similar to `mutate()` but drops all columns that you didn’t specifically mention
+
+---
+## Other verbs
+- `sample_n()` and `sample_frac()` to take random samples.
+- `distinct()`: returns distinct (unique) rows of a table
+- `slice()`: allows you to select rows by position. It includes positive integers and drops negative integers
+- `do()`: A generic function that applies any R function to specified groups in the data.
+
+With all these verbs you can use grouped operations with the function `group_by()`
+
+---
+## Multiple tables verbs
+
+dplyr implements the four most useful SQL joins:
+
+- `inner_join(x, y)`: matching x + y
+- `left_join(x, y)`: all x + matching y
+- `semi_join(x, y)`: all x with match in y
+- `anti_join(x, y)`: all x without match in y
+
+And provides methods for:
+
+- `intersect(x, y)`: all rows in both x and y
+- `union(x, y)`: rows in either x or y
+- `setdiff(x, y)`: rows in x, but not y
+
+---
+## Examples
+
+Let's play with our wine to show some examples of dplyr verbs
+
+
+```r
+View(data)
+```
+
+---
+## The select() verb:
+
+```r
+data %&gt;% 
+  select(country, points, price, title:winery)
+```
+
+```
+## # A tibble: 129,971 x 6
+##    country  points price title                                    variety      winery     
+##    &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                                    &lt;chr&gt;        &lt;chr&gt;      
+##  1 Italy        87    NA Nicosia 2013 Vulkà Bianco  (Etna)        White Blend  Nicosia    
+##  2 Portugal     87    15 Quinta dos Avidagos 2011 Avidagos Red (… Portuguese … Quinta dos…
+##  3 US           87    14 Rainstorm 2013 Pinot Gris (Willamette V… Pinot Gris   Rainstorm  
+##  4 US           87    13 St. Julian 2013 Reserve Late Harvest Ri… Riesling     St. Julian 
+##  5 US           87    65 Sweet Cheeks 2012 Vintner's Reserve Wil… Pinot Noir   Sweet Chee…
+##  6 Spain        87    15 Tandem 2011 Ars In Vitro Tempranillo-Me… Tempranillo… Tandem     
+##  7 Italy        87    16 Terre di Giurfo 2013 Belsito Frappato (… Frappato     Terre di G…
+##  8 France       87    24 Trimbach 2012 Gewurztraminer (Alsace)    Gewürztrami… Trimbach   
+##  9 Germany      87    12 Heinz Eifel 2013 Shine Gewürztraminer (… Gewürztrami… Heinz Eifel
+## 10 France       87    27 Jean-Baptiste Adam 2012 Les Natures Pin… Pinot Gris   Jean-Bapti…
+## # … with 129,961 more rows
+```
+
+---
+## Special functions
+
+`select()` and `rename()` allows existing functions like `:` and `c`, or the use of special functions:
+  
+- `starts_with(x)`: names starts with x
+
+- `ends_with(x)`: names ends in x
+
+- `contains(x)`: selects all variables whose name contains x
+
+- `matches(x)`: selects all variables whose name matches the regular expression x
+
+- `num_range("x", 1:5, width = 2)`: selects all variables (numerically) from x01 to x05.
+
+- `one_of("x", "y", "z")`: selects variables provided in a character vector.
+
+- `everything()`: selects all variables.
+
+- To drop variables, use `-variable`
+
+---
+## Some examples with select()
+
+
+```r
+data &lt;- data %&gt;% 
+  select(-X1)
+data
+```
+
+```
+## # A tibble: 129,971 x 13
+##    country description designation points price province region_1 region_2 taster_name
+##    &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;      
+##  1 Italy   Aromas inc… Vulkà Bian…     87    NA Sicily … Etna     &lt;NA&gt;     Kerin O’Ke…
+##  2 Portug… This is ri… Avidagos        87    15 Douro    &lt;NA&gt;     &lt;NA&gt;     Roger Voss 
+##  3 US      Tart and s… &lt;NA&gt;            87    14 Oregon   Willame… Willame… Paul Gregu…
+##  4 US      Pineapple … Reserve La…     87    13 Michigan Lake Mi… &lt;NA&gt;     Alexander …
+##  5 US      Much like … Vintner's …     87    65 Oregon   Willame… Willame… Paul Gregu…
+##  6 Spain   Blackberry… Ars In Vit…     87    15 Norther… Navarra  &lt;NA&gt;     Michael Sc…
+##  7 Italy   Here's a b… Belsito         87    16 Sicily … Vittoria &lt;NA&gt;     Kerin O’Ke…
+##  8 France  This dry a… &lt;NA&gt;            87    24 Alsace   Alsace   &lt;NA&gt;     Roger Voss 
+##  9 Germany Savory dri… Shine           87    12 Rheinhe… &lt;NA&gt;     &lt;NA&gt;     Anna Lee C…
+## 10 France  This has g… Les Natures     87    27 Alsace   Alsace   &lt;NA&gt;     Roger Voss 
+## # … with 129,961 more rows, and 4 more variables: taster_twitter_handle &lt;chr&gt;,
+## #   title &lt;chr&gt;, variety &lt;chr&gt;, winery &lt;chr&gt;
+```
+
+---
+## Some examples with select()
+  
+
+```r
+data %&gt;% 
+  select(country:points)
+```
+
+```
+## # A tibble: 129,971 x 4
+##    country  description                                      designation            points
+##    &lt;chr&gt;    &lt;chr&gt;                                            &lt;chr&gt;                   &lt;dbl&gt;
+##  1 Italy    Aromas include tropical fruit, broom, brimstone… Vulkà Bianco               87
+##  2 Portugal This is ripe and fruity, a wine that is smooth … Avidagos                   87
+##  3 US       Tart and snappy, the flavors of lime flesh and … &lt;NA&gt;                       87
+##  4 US       Pineapple rind, lemon pith and orange blossom s… Reserve Late Harvest       87
+##  5 US       Much like the regular bottling from 2012, this … Vintner's Reserve Wil…     87
+##  6 Spain    Blackberry and raspberry aromas show a typical … Ars In Vitro               87
+##  7 Italy    Here's a bright, informal red that opens with a… Belsito                    87
+##  8 France   This dry and restrained wine offers spice in pr… &lt;NA&gt;                       87
+##  9 Germany  Savory dried thyme notes accent sunnier flavors… Shine                      87
+## 10 France   This has great depth of flavor with its fresh a… Les Natures                87
+## # … with 129,961 more rows
+```
+
+---
+## Some examples with select()
+
+
+```r
+data %&gt;% 
+  select(starts_with("taster"))
+```
+
+```
+## # A tibble: 129,971 x 2
+##    taster_name        taster_twitter_handle
+##    &lt;chr&gt;              &lt;chr&gt;                
+##  1 Kerin O’Keefe      @kerinokeefe         
+##  2 Roger Voss         @vossroger           
+##  3 Paul Gregutt       @paulgwine           
+##  4 Alexander Peartree &lt;NA&gt;                 
+##  5 Paul Gregutt       @paulgwine           
+##  6 Michael Schachner  @wineschach          
+##  7 Kerin O’Keefe      @kerinokeefe         
+##  8 Roger Voss         @vossroger           
+##  9 Anna Lee C. Iijima &lt;NA&gt;                 
+## 10 Roger Voss         @vossroger           
+## # … with 129,961 more rows
+```
+
+---
+## Some examples with select()
+
+
+```r
+data %&gt;% 
+  select(contains("twitter"))
+```
+
+```
+## # A tibble: 129,971 x 1
+##    taster_twitter_handle
+##    &lt;chr&gt;                
+##  1 @kerinokeefe         
+##  2 @vossroger           
+##  3 @paulgwine           
+##  4 &lt;NA&gt;                 
+##  5 @paulgwine           
+##  6 @wineschach          
+##  7 @kerinokeefe         
+##  8 @vossroger           
+##  9 &lt;NA&gt;                 
+## 10 @vossroger           
+## # … with 129,961 more rows
+```
+
+---
+## How to change names
+Remember we have the following variables in our data
+
+```r
+names(data)
+```
+
+```
+##  [1] "country"               "description"           "designation"          
+##  [4] "points"                "price"                 "province"             
+##  [7] "region_1"              "region_2"              "taster_name"          
+## [10] "taster_twitter_handle" "title"                 "variety"              
+## [13] "winery"
+```
+
+---
+## Renaming
+With `select()` we can rename variables but those not mentioned are dropped
+
+```r
+data %&gt;% select(taster_twitter = taster_twitter_handle)
+```
+
+```
+## # A tibble: 129,971 x 1
+##    taster_twitter
+##    &lt;chr&gt;         
+##  1 @kerinokeefe  
+##  2 @vossroger    
+##  3 @paulgwine    
+##  4 &lt;NA&gt;          
+##  5 @paulgwine    
+##  6 @wineschach   
+##  7 @kerinokeefe  
+##  8 @vossroger    
+##  9 &lt;NA&gt;          
+## 10 @vossroger    
+## # … with 129,961 more rows
+```
+
+---
+## The rename() verb
+Using `rename()` we can keep all variables
+
+```r
+data %&gt;% rename(taster_twitter = taster_twitter_handle)
+```
+
+```
+## # A tibble: 129,971 x 13
+##    country description designation points price province region_1 region_2 taster_name
+##    &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;      
+##  1 Italy   Aromas inc… Vulkà Bian…     87    NA Sicily … Etna     &lt;NA&gt;     Kerin O’Ke…
+##  2 Portug… This is ri… Avidagos        87    15 Douro    &lt;NA&gt;     &lt;NA&gt;     Roger Voss 
+##  3 US      Tart and s… &lt;NA&gt;            87    14 Oregon   Willame… Willame… Paul Gregu…
+##  4 US      Pineapple … Reserve La…     87    13 Michigan Lake Mi… &lt;NA&gt;     Alexander …
+##  5 US      Much like … Vintner's …     87    65 Oregon   Willame… Willame… Paul Gregu…
+##  6 Spain   Blackberry… Ars In Vit…     87    15 Norther… Navarra  &lt;NA&gt;     Michael Sc…
+##  7 Italy   Here's a b… Belsito         87    16 Sicily … Vittoria &lt;NA&gt;     Kerin O’Ke…
+##  8 France  This dry a… &lt;NA&gt;            87    24 Alsace   Alsace   &lt;NA&gt;     Roger Voss 
+##  9 Germany Savory dri… Shine           87    12 Rheinhe… &lt;NA&gt;     &lt;NA&gt;     Anna Lee C…
+## 10 France  This has g… Les Natures     87    27 Alsace   Alsace   &lt;NA&gt;     Roger Voss 
+## # … with 129,961 more rows, and 4 more variables: taster_twitter &lt;chr&gt;, title &lt;chr&gt;,
+## #   variety &lt;chr&gt;, winery &lt;chr&gt;
+```
+
+---
+class: inverse, center, middle
+# By the way...
+
+---
+# Scoped variants
+
+### There are three kinds of scoped variants of dplyr verbs. 
+
+  
+- Verbs suffixed with _all() apply an operation on all variables.
+
+- Verbs suffixed with _at() apply an operation on a subset of variables specified with the quoting function vars(). This quoting function accepts tidyselect::vars_select() helpers like starts_with(). Instead of a vars() selection, you can also supply an integerish vector of column positions or a character vector of column names.
+
+- Verbs suffixed with _if() apply an operation on the subset of variables for which a predicate function returns TRUE. Instead of a predicate function, you can also supply a logical vector.
+
+---
+background-image: url(img/scoped.gif)
+
+---
+# Example
+
+```r
+data %&gt;% select_if(is_numeric)
+```
+
+```
+## # A tibble: 129,971 x 2
+##    points price
+##     &lt;dbl&gt; &lt;dbl&gt;
+##  1     87    NA
+##  2     87    15
+##  3     87    14
+##  4     87    13
+##  5     87    65
+##  6     87    15
+##  7     87    16
+##  8     87    24
+##  9     87    12
+## 10     87    27
+## # … with 129,961 more rows
+```
+
+---
+## The slice() verb
+
+
+```r
+data %&gt;% 
+  select(country, title, points, price) %&gt;% 
+  slice(1:5)
+```
+
+```
+## # A tibble: 5 x 4
+##   country  title                                                              points price
+##   &lt;chr&gt;    &lt;chr&gt;                                                               &lt;dbl&gt; &lt;dbl&gt;
+## 1 Italy    Nicosia 2013 Vulkà Bianco  (Etna)                                      87    NA
+## 2 Portugal Quinta dos Avidagos 2011 Avidagos Red (Douro)                          87    15
+## 3 US       Rainstorm 2013 Pinot Gris (Willamette Valley)                          87    14
+## 4 US       St. Julian 2013 Reserve Late Harvest Riesling (Lake Michigan Shor…     87    13
+## 5 US       Sweet Cheeks 2012 Vintner's Reserve Wild Child Block Pinot Noir (…     87    65
+```
+
+---
+## The arrange() verb
+  
+
+```r
+data %&gt;% 
+  select(country, title, points, price) %&gt;% 
+  slice(1:5) %&gt;% 
+  arrange(-price)
+```
+
+```
+## # A tibble: 5 x 4
+##   country  title                                                              points price
+##   &lt;chr&gt;    &lt;chr&gt;                                                               &lt;dbl&gt; &lt;dbl&gt;
+## 1 US       Sweet Cheeks 2012 Vintner's Reserve Wild Child Block Pinot Noir (…     87    65
+## 2 Portugal Quinta dos Avidagos 2011 Avidagos Red (Douro)                          87    15
+## 3 US       Rainstorm 2013 Pinot Gris (Willamette Valley)                          87    14
+## 4 US       St. Julian 2013 Reserve Late Harvest Riesling (Lake Michigan Shor…     87    13
+## 5 Italy    Nicosia 2013 Vulkà Bianco  (Etna)                                      87    NA
+```
+
+---
+## The distinct() verb
+
+
+```r
+data %&gt;% 
+  select(country, province) %&gt;% 
+  distinct()
+```
+
+```
+## # A tibble: 426 x 2
+##    country   province         
+##    &lt;chr&gt;     &lt;chr&gt;            
+##  1 Italy     Sicily &amp; Sardinia
+##  2 Portugal  Douro            
+##  3 US        Oregon           
+##  4 US        Michigan         
+##  5 Spain     Northern Spain   
+##  6 France    Alsace           
+##  7 Germany   Rheinhessen      
+##  8 US        California       
+##  9 Germany   Mosel            
+## 10 Argentina Other            
+## # … with 416 more rows
+```
+
+---
+## The mutate() verb
+
+We use `mutate` to modify a column.
+
+
+```r
+data &lt;- data %&gt;%
+  mutate(price_per_point = price/points, 
+         ppp2 = price_per_point*100) #Notice that we can apply sequential transformations 
+data %&gt;% 
+  select(points, price, price_per_point, ppp2) %&gt;% 
+  slice(1:5)
+```
+
+```
+## # A tibble: 5 x 4
+##   points price price_per_point  ppp2
+##    &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt; &lt;dbl&gt;
+## 1     87    NA          NA      NA  
+## 2     87    15           0.172  17.2
+## 3     87    14           0.161  16.1
+## 4     87    13           0.149  14.9
+## 5     87    65           0.747  74.7
+```
+
+---
+## Equivalently, we can use the transmute() verb:
+
+
+```r
+data %&gt;% 
+  transmute(price_per_point = price/points)
+```
+
+```
+## # A tibble: 129,971 x 1
+##    price_per_point
+##              &lt;dbl&gt;
+##  1          NA    
+##  2           0.172
+##  3           0.161
+##  4           0.149
+##  5           0.747
+##  6           0.172
+##  7           0.184
+##  8           0.276
+##  9           0.138
+## 10           0.310
+## # … with 129,961 more rows
+```
+
+---
+## mutate example: Logical expressions
+
+
+```r
+data &lt;- data %&gt;% 
+  mutate(price_range = ifelse(price_per_point&gt;mean(price_per_point, na.rm=T),"High","Low"))
+
+data %&gt;%
+  select(price_range, price_per_point)
+```
+
+```
+## # A tibble: 129,971 x 2
+##    price_range price_per_point
+##    &lt;chr&gt;                 &lt;dbl&gt;
+##  1 &lt;NA&gt;                 NA    
+##  2 Low                   0.172
+##  3 Low                   0.161
+##  4 Low                   0.149
+##  5 High                  0.747
+##  6 Low                   0.172
+##  7 Low                   0.184
+##  8 Low                   0.276
+##  9 Low                   0.138
+## 10 Low                   0.310
+## # … with 129,961 more rows
+```
+
+---
+## What if we want to transform more than one variable at a time?
+
+
+```r
+data %&gt;% 
+  mutate_if(is.numeric, list(~./100)) %&gt;% 
+  select_if(is.numeric)
+```
+
+```
+## # A tibble: 129,971 x 4
+##    points price price_per_point   ppp2
+##     &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;  &lt;dbl&gt;
+##  1   0.87 NA           NA       NA    
+##  2   0.87  0.15         0.00172  0.172
+##  3   0.87  0.14         0.00161  0.161
+##  4   0.87  0.13         0.00149  0.149
+##  5   0.87  0.65         0.00747  0.747
+##  6   0.87  0.15         0.00172  0.172
+##  7   0.87  0.16         0.00184  0.184
+##  8   0.87  0.24         0.00276  0.276
+##  9   0.87  0.12         0.00138  0.138
+## 10   0.87  0.27         0.00310  0.310
+## # … with 129,961 more rows
+```
+
+---
+## The filter() verb
+
+
+```r
+data %&gt;% 
+  filter(country=="Chile")
+```
+
+```
+## # A tibble: 4,472 x 16
+##    country description designation points price province region_1 region_2 taster_name
+##    &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;      
+##  1 Chile   White flow… Estate          86    15 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  2 Chile   A berry ar… &lt;NA&gt;            86     9 Maule V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  3 Chile   This is mu… Gran Reser…     85    22 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  4 Chile   Lightly he… Reserve         85    13 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  5 Chile   Caramelize… Special Re…     86    12 Rapel V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  6 Chile   A bright n… Single Vin…     87    18 Leyda V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  7 Chile   This blend… Condesa Re…     91    29 Aconcag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  8 Chile   Dry, briar… 20 Barrels      91    32 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  9 Chile   Dry, spicy… The 7th Ge…     91    20 Loncomi… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+## 10 Chile   Haven't se… Unusual Ca…     88    50 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+## # … with 4,462 more rows, and 7 more variables: taster_twitter_handle &lt;chr&gt;, title &lt;chr&gt;,
+## #   variety &lt;chr&gt;, winery &lt;chr&gt;, price_per_point &lt;dbl&gt;, ppp2 &lt;dbl&gt;, price_range &lt;chr&gt;
+```
+
+---
+## Chile is great, but how many possible options do we have?
+
+
+```r
+data %&gt;% 
+  select(country) %&gt;% 
+  distinct()
+```
+
+```
+## # A tibble: 44 x 1
+##    country  
+##    &lt;chr&gt;    
+##  1 Italy    
+##  2 Portugal 
+##  3 US       
+##  4 Spain    
+##  5 France   
+##  6 Germany  
+##  7 Argentina
+##  8 Chile    
+##  9 Australia
+## 10 Austria  
+## # … with 34 more rows
+```
+
+---
+## Or
+
+
+```r
+data %&gt;% 
+  select(country) %&gt;% 
+  arrange(country) %&gt;% 
+  distinct() %&gt;% 
+  pull()
+```
+
+```
+##  [1] "Argentina"              "Armenia"                "Australia"             
+##  [4] "Austria"                "Bosnia and Herzegovina" "Brazil"                
+##  [7] "Bulgaria"               "Canada"                 "Chile"                 
+## [10] "China"                  "Croatia"                "Cyprus"                
+## [13] "Czech Republic"         "Egypt"                  "England"               
+## [16] "France"                 "Georgia"                "Germany"               
+## [19] "Greece"                 "Hungary"                "India"                 
+## [22] "Israel"                 "Italy"                  "Lebanon"               
+## [25] "Luxembourg"             "Macedonia"              "Mexico"                
+## [28] "Moldova"                "Morocco"                "New Zealand"           
+## [31] "Peru"                   "Portugal"               "Romania"               
+## [34] "Serbia"                 "Slovakia"               "Slovenia"              
+## [37] "South Africa"           "Spain"                  "Switzerland"           
+## [40] "Turkey"                 "Ukraine"                "Uruguay"               
+## [43] "US"                     NA
+```
+
+---
+## or just
+
+```r
+data$country %&gt;% unique()
+```
+
+```
+##  [1] "Italy"                  "Portugal"               "US"                    
+##  [4] "Spain"                  "France"                 "Germany"               
+##  [7] "Argentina"              "Chile"                  "Australia"             
+## [10] "Austria"                "South Africa"           "New Zealand"           
+## [13] "Israel"                 "Hungary"                "Greece"                
+## [16] "Romania"                "Mexico"                 "Canada"                
+## [19] NA                       "Turkey"                 "Czech Republic"        
+## [22] "Slovenia"               "Luxembourg"             "Croatia"               
+## [25] "Georgia"                "Uruguay"                "England"               
+## [28] "Lebanon"                "Serbia"                 "Brazil"                
+## [31] "Moldova"                "Morocco"                "Peru"                  
+## [34] "India"                  "Bulgaria"               "Cyprus"                
+## [37] "Armenia"                "Switzerland"            "Bosnia and Herzegovina"
+## [40] "Ukraine"                "Slovakia"               "Macedonia"             
+## [43] "China"                  "Egypt"
+```
+
+---
+## The filter() verb
+
+
+```r
+data %&gt;% 
+  filter(country == "Chile",
+         price_range == "High")
+```
+
+```
+## # A tibble: 441 x 16
+##    country description designation points price province region_1 region_2 taster_name
+##    &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;      
+##  1 Chile   Haven't se… Unusual Ca…     88    50 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  2 Chile   Mildly min… Gran Arauc…     86    35 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  3 Chile   Gritty, he… Costa           83    35 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  4 Chile   Gê is one … Gê              92    92 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  5 Chile   The nose i… Terrunyo V…     92    38 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  6 Chile   There's a … VSC             92    40 Cachapo… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  7 Chile   Oak, resin… Axel Prime…     90    40 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  8 Chile   A bit mulc… Manso de V…     88    42 Central… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  9 Chile   Smoky, rub… Catalina        88    40 Peumo    &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+## 10 Chile   A lot of o… Microterro…     88    49 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+## # … with 431 more rows, and 7 more variables: taster_twitter_handle &lt;chr&gt;, title &lt;chr&gt;,
+## #   variety &lt;chr&gt;, winery &lt;chr&gt;, price_per_point &lt;dbl&gt;, ppp2 &lt;dbl&gt;, price_range &lt;chr&gt;
+```
+
+---
+## The filter() verb
+
+
+```r
+data %&gt;% 
+  filter(country == "Chile",
+         price &gt; 20)
+```
+
+```
+## # A tibble: 1,097 x 16
+##    country description designation points price province region_1 region_2 taster_name
+##    &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;      
+##  1 Chile   This is mu… Gran Reser…     85    22 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  2 Chile   This blend… Condesa Re…     91    29 Aconcag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  3 Chile   Dry, briar… 20 Barrels      91    32 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  4 Chile   Haven't se… Unusual Ca…     88    50 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  5 Chile   Mildly min… Gran Arauc…     86    35 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  6 Chile   Gritty, he… Costa           83    35 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  7 Chile   Baked blue… 20 Barrels…     91    35 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  8 Chile   Jammy berr… Cuvée Alex…     91    24 Colchag… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+##  9 Chile   Earthy red… Millantu        90    25 Maipo V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+## 10 Chile   Despite sh… Éclat Vign…     90    35 Maule V… &lt;NA&gt;     &lt;NA&gt;     Michael Sc…
+## # … with 1,087 more rows, and 7 more variables: taster_twitter_handle &lt;chr&gt;, title &lt;chr&gt;,
+## #   variety &lt;chr&gt;, winery &lt;chr&gt;, price_per_point &lt;dbl&gt;, ppp2 &lt;dbl&gt;, price_range &lt;chr&gt;
+```
+
+---
+## The summarise() verb
+
+
+```r
+data %&gt;% 
+  filter(country == "Chile",
+         price_range == "High") %&gt;% 
+  summarise(price = mean(price, na.rm = T))
+```
+
+```
+## # A tibble: 1 x 1
+##   price
+##   &lt;dbl&gt;
+## 1  67.4
+```
+
+---
+## Grouped operations: group_by()
+
+
+```r
+data %&gt;% 
+  group_by(country)
+```
+
+```
+## # A tibble: 129,971 x 16
+## # Groups:   country [44]
+##    country description designation points price province region_1 region_2 taster_name
+##    &lt;chr&gt;   &lt;chr&gt;       &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;    &lt;chr&gt;      
+##  1 Italy   Aromas inc… Vulkà Bian…     87    NA Sicily … Etna     &lt;NA&gt;     Kerin O’Ke…
+##  2 Portug… This is ri… Avidagos        87    15 Douro    &lt;NA&gt;     &lt;NA&gt;     Roger Voss 
+##  3 US      Tart and s… &lt;NA&gt;            87    14 Oregon   Willame… Willame… Paul Gregu…
+##  4 US      Pineapple … Reserve La…     87    13 Michigan Lake Mi… &lt;NA&gt;     Alexander …
+##  5 US      Much like … Vintner's …     87    65 Oregon   Willame… Willame… Paul Gregu…
+##  6 Spain   Blackberry… Ars In Vit…     87    15 Norther… Navarra  &lt;NA&gt;     Michael Sc…
+##  7 Italy   Here's a b… Belsito         87    16 Sicily … Vittoria &lt;NA&gt;     Kerin O’Ke…
+##  8 France  This dry a… &lt;NA&gt;            87    24 Alsace   Alsace   &lt;NA&gt;     Roger Voss 
+##  9 Germany Savory dri… Shine           87    12 Rheinhe… &lt;NA&gt;     &lt;NA&gt;     Anna Lee C…
+## 10 France  This has g… Les Natures     87    27 Alsace   Alsace   &lt;NA&gt;     Roger Voss 
+## # … with 129,961 more rows, and 7 more variables: taster_twitter_handle &lt;chr&gt;,
+## #   title &lt;chr&gt;, variety &lt;chr&gt;, winery &lt;chr&gt;, price_per_point &lt;dbl&gt;, ppp2 &lt;dbl&gt;,
+## #   price_range &lt;chr&gt;
+```
+
+---
+## group_by() is useful when combined with the verbs:
+
+
+```r
+data %&gt;% 
+  group_by(country) %&gt;% 
+  summarise(mean_price = mean(price, na.rm = T))
+```
+
+```
+## `summarise()` ungrouping output (override with `.groups` argument)
+```
+
+```
+## # A tibble: 44 x 2
+##    country                mean_price
+##    &lt;chr&gt;                       &lt;dbl&gt;
+##  1 Argentina                    24.5
+##  2 Armenia                      14.5
+##  3 Australia                    35.4
+##  4 Austria                      30.8
+##  5 Bosnia and Herzegovina       12.5
+##  6 Brazil                       23.8
+##  7 Bulgaria                     14.6
+##  8 Canada                       35.7
+##  9 Chile                        20.8
+## 10 China                        18  
+## # … with 34 more rows
+```
+
+*Exercise:* Filter out the rows where Country is missing and recalculate the group_by and mean.
+
+
+---
+## group by several variables:
+
+
+```r
+data %&gt;% 
+  group_by(country, price_range) %&gt;% 
+  summarise(mean_price = mean(price, na.rm = T))
+```
+
+```
+## `summarise()` regrouping output by 'country' (override with `.groups` argument)
+```
+
+```
+## # A tibble: 100 x 3
+## # Groups:   country [44]
+##    country   price_range mean_price
+##    &lt;chr&gt;     &lt;chr&gt;            &lt;dbl&gt;
+##  1 Argentina High              67.4
+##  2 Argentina Low               16.7
+##  3 Argentina &lt;NA&gt;             NaN  
+##  4 Armenia   Low               14.5
+##  5 Australia High              78.8
+##  6 Australia Low               18.9
+##  7 Australia &lt;NA&gt;             NaN  
+##  8 Austria   High              56.7
+##  9 Austria   Low               21.8
+## 10 Austria   &lt;NA&gt;             NaN  
+## # … with 90 more rows
+```
+
+---
+## Notice that with each aggregation we are ungrouping one level:
+
+
+```r
+data %&gt;% 
+  group_by(country, province, region_1, region_2) %&gt;% 
+  summarise(n=n()) %&gt;% 
+  summarise(n=sum(n))
+```
+
+```
+## `summarise()` regrouping output by 'country', 'province', 'region_1' (override with `.groups` argument)
+```
+
+```
+## `summarise()` regrouping output by 'country', 'province' (override with `.groups` argument)
+```
+
+```
+## # A tibble: 1,614 x 4
+## # Groups:   country, province [426]
+##    country   province         region_1             n
+##    &lt;chr&gt;     &lt;chr&gt;            &lt;chr&gt;            &lt;int&gt;
+##  1 Argentina Mendoza Province Agrelo              50
+##  2 Argentina Mendoza Province Altos de Mendoza     1
+##  3 Argentina Mendoza Province La Consulta         48
+##  4 Argentina Mendoza Province Luján de Cuyo      180
+##  5 Argentina Mendoza Province Maipú               24
+##  6 Argentina Mendoza Province Medrano              1
+##  7 Argentina Mendoza Province Mendoza           2301
+##  8 Argentina Mendoza Province Perdriel            27
+##  9 Argentina Mendoza Province San Carlos           4
+## 10 Argentina Mendoza Province San Rafael           2
+## # … with 1,604 more rows
+```
+
+---
+## Notice that with each aggregation we are ungrouping one level:
+
+
+```r
+data %&gt;% 
+  group_by(country, province, region_1, region_2)%&gt;% 
+  summarise(n=n()) %&gt;% 
+  summarise(n=sum(n)) %&gt;% 
+  summarise(n=sum(n)) %&gt;% 
+  summarise(n = sum(n))
+```
+
+```
+## `summarise()` regrouping output by 'country', 'province', 'region_1' (override with `.groups` argument)
+```
+
+```
+## `summarise()` regrouping output by 'country', 'province' (override with `.groups` argument)
+```
+
+```
+## `summarise()` regrouping output by 'country' (override with `.groups` argument)
+```
+
+```
+## `summarise()` ungrouping output (override with `.groups` argument)
+```
+
+```
+## # A tibble: 44 x 2
+##    country                    n
+##    &lt;chr&gt;                  &lt;int&gt;
+##  1 Argentina               3800
+##  2 Armenia                    2
+##  3 Australia               2329
+##  4 Austria                 3345
+##  5 Bosnia and Herzegovina     2
+##  6 Brazil                    52
+##  7 Bulgaria                 141
+##  8 Canada                   257
+##  9 Chile                   4472
+## 10 China                      1
+## # … with 34 more rows
+```
+
+---
+## We can ungroup the data manually too:
+
+
+```r
+data %&gt;% 
+  group_by(country, province, region_1, region_2)%&gt;% 
+  summarise(n=n()) %&gt;% 
+  ungroup() 
+```
+
+---
+## And speaking about n()
+
+As you saw before, `n()` allows to count the number of rows in a current group. There are related functions worth to know:
+
+* tally() is a convenient wrapper for summarise that will either call n() or sum(n) depending on whether you're tallying for the first time, or re-tallying. 
+* count() is similar but calls group_by() before and ungroup() after.
+* add_tally() adds a column "n" to a table based on the number of items within each existing group, 
+* add_count() is a shortcut that does the grouping as well. 
+
+---
+
+```r
+data %&gt;% 
+  group_by(country, province, region_1, region_2)%&gt;% 
+  tally()
+```
+
+```
+## # A tibble: 1,620 x 5
+## # Groups:   country, province, region_1 [1,614]
+##    country   province         region_1         region_2     n
+##    &lt;chr&gt;     &lt;chr&gt;            &lt;chr&gt;            &lt;chr&gt;    &lt;int&gt;
+##  1 Argentina Mendoza Province Agrelo           &lt;NA&gt;        50
+##  2 Argentina Mendoza Province Altos de Mendoza &lt;NA&gt;         1
+##  3 Argentina Mendoza Province La Consulta      &lt;NA&gt;        48
+##  4 Argentina Mendoza Province Luján de Cuyo    &lt;NA&gt;       180
+##  5 Argentina Mendoza Province Maipú            &lt;NA&gt;        24
+##  6 Argentina Mendoza Province Medrano          &lt;NA&gt;         1
+##  7 Argentina Mendoza Province Mendoza          &lt;NA&gt;      2301
+##  8 Argentina Mendoza Province Perdriel         &lt;NA&gt;        27
+##  9 Argentina Mendoza Province San Carlos       &lt;NA&gt;         4
+## 10 Argentina Mendoza Province San Rafael       &lt;NA&gt;         2
+## # … with 1,610 more rows
+```
+
+---
+
+```r
+data %&gt;% 
+  count(country, province, region_1, region_2)
+```
+
+```
+## # A tibble: 1,620 x 5
+##    country   province         region_1         region_2     n
+##    &lt;chr&gt;     &lt;chr&gt;            &lt;chr&gt;            &lt;chr&gt;    &lt;int&gt;
+##  1 Argentina Mendoza Province Agrelo           &lt;NA&gt;        50
+##  2 Argentina Mendoza Province Altos de Mendoza &lt;NA&gt;         1
+##  3 Argentina Mendoza Province La Consulta      &lt;NA&gt;        48
+##  4 Argentina Mendoza Province Luján de Cuyo    &lt;NA&gt;       180
+##  5 Argentina Mendoza Province Maipú            &lt;NA&gt;        24
+##  6 Argentina Mendoza Province Medrano          &lt;NA&gt;         1
+##  7 Argentina Mendoza Province Mendoza          &lt;NA&gt;      2301
+##  8 Argentina Mendoza Province Perdriel         &lt;NA&gt;        27
+##  9 Argentina Mendoza Province San Carlos       &lt;NA&gt;         4
+## 10 Argentina Mendoza Province San Rafael       &lt;NA&gt;         2
+## # … with 1,610 more rows
+```
+
+---
+class: center, middle, inverse
+
+# Data tidying
+![](img/tidy.gif)
+
+---
+background-image: url(img/tidyr.jpg)
+
+---
+## Tidying data: tidyr
+
+`tidyr`: structuring datasets to facilitate analysis.
+
+Like families, tidy datasets are all alike but every messy dataset is messy in its own way.
+
+Tidy data:
+
+* Each variable must have its own column.
+* Each observation must have its own row.
+* Each value must have its own cell.
+
+---
+## tidyr
+
+Tidyr provides the following verbs:
+
+- Pivotting” which converts between long and wide forms: pivot_longer() and pivot_wider()
+
+- “Rectangling”, which turns deeply nested lists (as from JSON) into tidy tibbles: unnest_longer(), unnest_wider(), hoist(). Check vignette("rectangle") for more details.
+
+- Nesting converts grouped data to a form where each group becomes a single row containing a nested data frame, and unnesting does the opposite. See nest(), unnest(), and vignette("nest") for more details.
+
+- Splitting and combining character columns. Use separate() and extract() to pull a single character column into multiple columns; use unite() to combine multiple columns into a single character column.
+
+- Make implicit missing values explicit with complete(); make explicit missing values implicit with drop_na(); replace missing values with next/previous value with fill(), or a known value with replace_na().
+
+---
+# Pivotting
+
+There are two fundamental verbs of pivotting:
+
+- `pivot_longer()` takes multiple columns, and gathers them into key-value pairs: it makes "wide" data longer.
+
+- `pivot_wider()` takes two columns (key &amp; value) and spreads in to multiple columns, it makes "long" data wider.
+
+---
+## tidyr example
+
+```r
+library(tidyr)
+data %&gt;% 
+  group_by(country, variety) %&gt;% 
+  summarise(points = mean(points, na.rm = T))
+```
+
+```
+## # A tibble: 1,644 x 3
+## # Groups:   country [44]
+##    country   variety                           points
+##    &lt;chr&gt;     &lt;chr&gt;                              &lt;dbl&gt;
+##  1 Argentina Barbera                             85  
+##  2 Argentina Bonarda                             86.5
+##  3 Argentina Bordeaux-style Red Blend            89.8
+##  4 Argentina Bordeaux-style White Blend          83  
+##  5 Argentina Cabernet Blend                      88.2
+##  6 Argentina Cabernet Franc                      89.4
+##  7 Argentina Cabernet Franc-Cabernet Sauvignon   88.7
+##  8 Argentina Cabernet Franc-Malbec               91  
+##  9 Argentina Cabernet Sauvignon                  86.0
+## 10 Argentina Cabernet Sauvignon-Cabernet Franc   84  
+## # … with 1,634 more rows
+```
+
+---
+## tidyr example
+
+```r
+data2 &lt;- data %&gt;% 
+  group_by(country, variety) %&gt;% 
+  summarise(points = mean(points, na.rm = T)) %&gt;% 
+  pivot_wider(names_from = variety, values_from = points)
+data2
+```
+
+```
+## # A tibble: 44 x 709
+## # Groups:   country [44]
+##    country Barbera Bonarda `Bordeaux-style… `Bordeaux-style… `Cabernet Blend`
+##    &lt;chr&gt;     &lt;dbl&gt;   &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;
+##  1 Argent…      85    86.5             89.8               83             88.2
+##  2 Armenia      NA    NA               NA                 NA             NA  
+##  3 Austra…      NA    NA               89.1               NA             88.7
+##  4 Austria      NA    NA               90.5               NA             NA  
+##  5 Bosnia…      NA    NA               NA                 NA             NA  
+##  6 Brazil       NA    NA               84                 NA             NA  
+##  7 Bulgar…      NA    NA               91                 NA             NA  
+##  8 Canada       NA    NA               90.5               NA             NA  
+##  9 Chile        NA    NA               90.1               NA             89.0
+## 10 China        NA    NA               NA                 NA             89  
+## # … with 34 more rows, and 703 more variables: `Cabernet Franc` &lt;dbl&gt;, `Cabernet
+## #   Franc-Cabernet Sauvignon` &lt;dbl&gt;, `Cabernet Franc-Malbec` &lt;dbl&gt;, `Cabernet
+## #   Sauvignon` &lt;dbl&gt;, `Cabernet Sauvignon-Cabernet Franc` &lt;dbl&gt;, `Cabernet
+## #   Sauvignon-Malbec` &lt;dbl&gt;, `Cabernet Sauvignon-Merlot` &lt;dbl&gt;, `Cabernet
+## #   Sauvignon-Shiraz` &lt;dbl&gt;, `Cabernet Sauvignon-Syrah` &lt;dbl&gt;, `Cabernet-Malbec` &lt;dbl&gt;,
+## #   `Cabernet-Syrah` &lt;dbl&gt;, `Champagne Blend` &lt;dbl&gt;, Chardonnay &lt;dbl&gt;,
+## #   `Chardonnay-Sauvignon` &lt;dbl&gt;, `Chardonnay-Semillon` &lt;dbl&gt;,
+## #   `Chardonnay-Viognier` &lt;dbl&gt;, `Chenin Blanc` &lt;dbl&gt;, `Chenin Blanc-Chardonnay` &lt;dbl&gt;,
+## #   Gewürztraminer &lt;dbl&gt;, Malbec &lt;dbl&gt;, `Malbec Blend` &lt;dbl&gt;, `Malbec-Bonarda` &lt;dbl&gt;,
+## #   `Malbec-Cabernet` &lt;dbl&gt;, `Malbec-Cabernet Franc` &lt;dbl&gt;, `Malbec-Cabernet
+## #   Sauvignon` &lt;dbl&gt;, `Malbec-Merlot` &lt;dbl&gt;, `Malbec-Petit Verdot` &lt;dbl&gt;,
+## #   `Malbec-Syrah` &lt;dbl&gt;, `Malbec-Tannat` &lt;dbl&gt;, `Malbec-Tempranillo` &lt;dbl&gt;,
+## #   Merlot &lt;dbl&gt;, `Merlot-Cabernet Franc` &lt;dbl&gt;, Moscatel &lt;dbl&gt;, Moscato &lt;dbl&gt;,
+## #   Nebbiolo &lt;dbl&gt;, `Petit Verdot` &lt;dbl&gt;, `Pinot Grigio` &lt;dbl&gt;, `Pinot Gris` &lt;dbl&gt;,
+## #   `Pinot Noir` &lt;dbl&gt;, `Red Blend` &lt;dbl&gt;, Riesling &lt;dbl&gt;, Rosado &lt;dbl&gt;, Rosé &lt;dbl&gt;,
+## #   Sangiovese &lt;dbl&gt;, `Sauvignon Blanc` &lt;dbl&gt;, Sémillon &lt;dbl&gt;, Shiraz &lt;dbl&gt;,
+## #   `Shiraz-Malbec` &lt;dbl&gt;, `Sparkling Blend` &lt;dbl&gt;, Syrah &lt;dbl&gt;, `Syrah-Bonarda` &lt;dbl&gt;,
+## #   `Syrah-Malbec` &lt;dbl&gt;, `Syrah-Viognier` &lt;dbl&gt;, Tannat &lt;dbl&gt;, Tempranillo &lt;dbl&gt;,
+## #   `Tempranillo-Malbec` &lt;dbl&gt;, Tocai &lt;dbl&gt;, Torrontés &lt;dbl&gt;, Trebbiano &lt;dbl&gt;,
+## #   Trousseau &lt;dbl&gt;, Viognier &lt;dbl&gt;, `White Blend` &lt;dbl&gt;, Kangoun &lt;dbl&gt;, `Cabernet
+## #   Merlot` &lt;dbl&gt;, `Cabernet Sauvignon-Merlot-Shiraz` &lt;dbl&gt;, `Cabernet
+## #   Sauvignon-Sangiovese` &lt;dbl&gt;, `Cabernet-Shiraz` &lt;dbl&gt;, Durif &lt;dbl&gt;, `G-S-M` &lt;dbl&gt;,
+## #   Grenache &lt;dbl&gt;, `Grenache-Shiraz` &lt;dbl&gt;, Marsanne &lt;dbl&gt;, `Marsanne-Roussanne` &lt;dbl&gt;,
+## #   Mataro &lt;dbl&gt;, Montepulciano &lt;dbl&gt;, Mourvèdre &lt;dbl&gt;, `Mourvèdre-Syrah` &lt;dbl&gt;,
+## #   Muscadelle &lt;dbl&gt;, Muscat &lt;dbl&gt;, `Muscat Hamburg` &lt;dbl&gt;, `Petite Sirah` &lt;dbl&gt;,
+## #   Port &lt;dbl&gt;, `Rhône-style Red Blend` &lt;dbl&gt;, `Rhône-style White Blend` &lt;dbl&gt;,
+## #   Roussanne &lt;dbl&gt;, Sauvignon &lt;dbl&gt;, `Sauvignon Blanc-Semillon` &lt;dbl&gt;, Savagnin &lt;dbl&gt;,
+## #   `Semillon-Chardonnay` &lt;dbl&gt;, `Semillon-Sauvignon Blanc` &lt;dbl&gt;,
+## #   `Shiraz-Cabernet` &lt;dbl&gt;, `Shiraz-Cabernet Sauvignon` &lt;dbl&gt;, `Shiraz-Grenache` &lt;dbl&gt;,
+## #   `Shiraz-Mourvèdre` &lt;dbl&gt;, `Shiraz-Roussanne` &lt;dbl&gt;, `Shiraz-Viognier` &lt;dbl&gt;,
+## #   Tokay &lt;dbl&gt;, Verdelho &lt;dbl&gt;, Vermentino &lt;dbl&gt;, `Viognier-Marsanne` &lt;dbl&gt;, …
+```
+
+---
+## And inversely
+
+```r
+data3 &lt;- data2 %&gt;% 
+  pivot_longer(-country, names_to = "variety", values_to = "points") #It also accepts select functions...
+data3
+```
+
+```
+## # A tibble: 31,152 x 3
+## # Groups:   country [44]
+##    country   variety                           points
+##    &lt;chr&gt;     &lt;chr&gt;                              &lt;dbl&gt;
+##  1 Argentina Barbera                             85  
+##  2 Argentina Bonarda                             86.5
+##  3 Argentina Bordeaux-style Red Blend            89.8
+##  4 Argentina Bordeaux-style White Blend          83  
+##  5 Argentina Cabernet Blend                      88.2
+##  6 Argentina Cabernet Franc                      89.4
+##  7 Argentina Cabernet Franc-Cabernet Sauvignon   88.7
+##  8 Argentina Cabernet Franc-Malbec               91  
+##  9 Argentina Cabernet Sauvignon                  86.0
+## 10 Argentina Cabernet Sauvignon-Cabernet Franc   84  
+## # … with 31,142 more rows
+```
+
+---
+## unite()
+
+```r
+data3 &lt;- data3 %&gt;% 
+  unite(country_variety, country, variety, remove=FALSE) 
+data3
+```
+
+```
+## # A tibble: 31,152 x 4
+## # Groups:   country [44]
+##    country_variety                          country   variety                       points
+##    &lt;chr&gt;                                    &lt;chr&gt;     &lt;chr&gt;                          &lt;dbl&gt;
+##  1 Argentina_Barbera                        Argentina Barbera                         85  
+##  2 Argentina_Bonarda                        Argentina Bonarda                         86.5
+##  3 Argentina_Bordeaux-style Red Blend       Argentina Bordeaux-style Red Blend        89.8
+##  4 Argentina_Bordeaux-style White Blend     Argentina Bordeaux-style White Blend      83  
+##  5 Argentina_Cabernet Blend                 Argentina Cabernet Blend                  88.2
+##  6 Argentina_Cabernet Franc                 Argentina Cabernet Franc                  89.4
+##  7 Argentina_Cabernet Franc-Cabernet Sauvi… Argentina Cabernet Franc-Cabernet Sauv…   88.7
+##  8 Argentina_Cabernet Franc-Malbec          Argentina Cabernet Franc-Malbec           91  
+##  9 Argentina_Cabernet Sauvignon             Argentina Cabernet Sauvignon              86.0
+## 10 Argentina_Cabernet Sauvignon-Cabernet F… Argentina Cabernet Sauvignon-Cabernet …   84  
+## # … with 31,142 more rows
+```
+
+---
+## separate()
+
+```r
+data3 %&gt;% 
+  separate(country_variety, c("country", "variety"), sep = "_")
+```
+
+```
+## # A tibble: 31,152 x 3
+## # Groups:   country [44]
+##    country   variety                           points
+##    &lt;chr&gt;     &lt;chr&gt;                              &lt;dbl&gt;
+##  1 Argentina Barbera                             85  
+##  2 Argentina Bonarda                             86.5
+##  3 Argentina Bordeaux-style Red Blend            89.8
+##  4 Argentina Bordeaux-style White Blend          83  
+##  5 Argentina Cabernet Blend                      88.2
+##  6 Argentina Cabernet Franc                      89.4
+##  7 Argentina Cabernet Franc-Cabernet Sauvignon   88.7
+##  8 Argentina Cabernet Franc-Malbec               91  
+##  9 Argentina Cabernet Sauvignon                  86.0
+## 10 Argentina Cabernet Sauvignon-Cabernet Franc   84  
+## # … with 31,142 more rows
+```
+
+--
+What was the problem here? How to solve it?
+
+---
+## Other tidyr verbs:
+
+- `complete()` Complete a data frame with missing combinations of data.
+
+- `drop_na()` Drop rows containing missing values
+
+- `expand(), crossing(), nesting()` Expand data frame to include all combinations of values
+
+- `fill()` Fill in missing values.
+
+- `full_seq()` Create the full sequence of values in a vector.
+
+- `replace_na()` Replace missing values
+
+---
+class: center, middle, inverse
+
+# Useful resources
+
+---
+# Keep learning data preparation
+
+- [Tidyverse](https://www.tidyverse.org/)
+- [R for data Science](http://r4ds.had.co.nz/)
+
+- [R for data science Slack](https://rfordatascience.slack.com/)
+
+- [Tidy tuesday](https://github.com/rfordatascience/tidytuesday) [examples](https://twitter.com/search?q=%23TidyTuesday)
+
+---
+class: center, middle
+
+# Thank you and time for more practise!
+![](img/bye.gif)
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false,
+"ratio": "16:9"
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

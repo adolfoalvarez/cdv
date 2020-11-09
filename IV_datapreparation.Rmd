@@ -1,0 +1,874 @@
+---
+title: "Data preparation"
+author: "Adolfo Alvarez - Collegium Da Vinci"
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: '16:9'
+    css: xaringan-themer.css
+---
+class: center, middle
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE) #, knitr.table.format = 'latex')
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+# options(width=45)
+options(width = 90)
+knitr::opts_chunk$set(fig.pos = 'H')
+
+# Making some aesthetic changes for this document
+theme_set(theme_gray(base_size = 9))
+update_geom_defaults("point", list(size = 0.5))
+update_geom_defaults("boxplot", list(outlier.size = 0.5))
+```
+
+```{r xaringan-themer, include=FALSE}
+library(xaringanthemer)
+# solarized_dark(
+#   code_font_family = "Fira Code",
+#   code_font_url    = "https://cdn.rawgit.com/tonsky/FiraCode/1.204/distr/fira_code.css"
+# )
+mono_accent(
+  base_color = "#004d67",
+  header_font_google = google_font("Muli"),
+  text_font_google   = google_font("Muli", "300", "300i"),
+  code_font_google   = google_font("Droid Mono")
+)
+```
+# Introduction
+
+---
+class: center, middle, inverse
+
+# Disclaimer: Today I will show ONE way to solve data preparation tasks, and hopefully I will point you to alternatives. 
+
+---
+class: center, middle, inverse
+
+#This way (tidyverse) is not the only one, and not necesarily the fastest, or the best for your own needs or preferences. One of the big advantages of R is that you can choose the "flavor" that suits you better.
+
+---
+class: center, middle
+
+# Data preparation is the art of getting your data (into R) in a useful form for visualization and modeling.
+
+---
+background-image: url(img/start.gif)
+
+---
+# The three basic steps of data preparation
+
+- Import 
+- Tidy
+- Transform
+
+---
+background-image: url(img/tidyverse.png)
+background-size: 910px
+class: center, middle
+
+# Tidyverse!
+
+---
+# The three basic steps of data preparation
+
+- Import (readr, readxl, haven)
+- Tidy (tidyr)
+- Transform (dplyr)
+
+---
+# Other members of the tidyverse
+
+- Visualization (ggplot2)
+- Import (jsonlite, xml2, httr, rvest, DBI)
+- Transform (stringr, forcats, lubridate, hms, blob)
+- Program (purrr, magrittr, glue)
+
+---
+<iframe width="560" height="315" src="https://www.tidyverse.org/packages/" frameBorder="0"></iframe>
+
+---
+Then first step is:
+```{r}
+library(tidyverse)
+```
+
+---
+class: center, middle, inverse
+
+#Introduction to tidy data
+
+---
+background-image: url(img/notidy1.jpg)
+
+---
+#Tidy data
+There are three interrelated rules that make a data set tidy:
+- Each variable must have its own column
+- Each observation must have its own row
+- Each value must have its own cell
+
+---
+# Two things we will use across all our workshop:
+.pull-left[
+![Image](img/magrittr.png)
+]
+
+.pull-right[
+![Image](img/tibble.png)
+]
+
+---
+# The %>% pipe
+
+## Basic piping
+
+  * `x %>% f` is equivalent to `f(x)`
+  * `x %>% f(y)` is equivalent to `f(x, y)`
+  * `x %>% f %>% g %>% h` is equivalent to `h(g(f(x)))`
+
+### The argument placeholder
+
+ * `x %>% f(y, .)` is equivalent to `f(y, x)`
+ * `x %>% f(y, z = .)` is equivalent to `f(y, z = x)`
+
+---
+# The %>% pipe
+## Example
+```{r}
+colMeans(subset(iris, Species == "setosa", select= -Species))
+iris %>% 
+  subset(Species == "setosa", select = -Species ) %>% 
+  colMeans()
+```
+
+---
+#The %>% pipe
+
+- And one more reminder: Rstudio shortcut for the pipe is Ctrl+Shift+M
+- Check more shortcuts at Tools -> Keyboard Shortcuts Help.
+
+---
+#Tibbles: A (new) way to organize data in R
+
+### It never changes an input's type (i.e., no more `stringsAsFactors = FALSE`!).
+    
+```{r}
+tibble(x = letters)
+```
+    
+---
+### This makes it easier to use with list-columns:
+    
+```{r}
+tibble(x = 1:3, y = list(1:5, 1:10, 1:20))
+```
+
+---
+### It never adjusts the names of variables:
+  
+```{r}
+names(data.frame(`crazy name` = 1))
+names(tibble(`crazy name` = 1))
+```
+
+---
+### It evaluates its arguments lazily and sequentially:
+  
+```{r}
+tibble(x = 1:5, y = x ^ 2)
+```
+
+  * It never uses `row.names()`. The whole point of tidy data is to 
+    store variables in a consistent way. So it never stores a variable as 
+    special attribute.
+  
+  * It only recycles vectors of length 1. This is because recycling vectors of greater lengths 
+    is a frequent source of bugs.
+
+---
+# Tibbles vs data frames
+
+The key differences between tibbles and data frames are: printing, subsetting, and recycling rules.
+
+---
+## Printing
+When you print a tibble, it only shows the first ten rows and all the columns that fit on one screen. It also prints an abbreviated description of the column type:
+    
+```{r}
+tibble(x = 1:1000, y = rep("a", 1000), z = sample(c(T,F),1000, rep=T))
+```
+
+---
+## Subsetting
+
+Tibbles are quite strict about subsetting. `[` always returns another tibble. Contrast this with a data frame: sometimes `[` returns a data frame and sometimes it just returns a vector:
+    
+```{r}
+df1 <- data.frame(x = 1:3, y = 3:1)
+class(df1[, 1:2])
+class(df1[, 1])
+
+df2 <- tibble(x = 1:3, y = 3:1)
+class(df2[, 1:2])
+class(df2[, 1])
+```
+
+---
+To extract a single column use `[[` or `$`:
+
+```{r}
+class(df2[[1]])
+class(df2$x)
+```
+
+Tibbles are also stricter with `$`. Tibbles never do partial matching, and will throw a warning and return `NULL` if the column does not exist:
+
+```{r, error = TRUE}
+df <- data.frame(abc = 1)
+df$a
+
+df2 <- tibble(abc = 1)
+df2$a
+```
+
+---
+## Recycling
+
+When constructing a tibble, only values of length 1 are recycled.  The first column with length different to one determines the number of rows in the tibble, conflicts lead to an error. 
+
+```{r, error = TRUE}
+tibble(a = 1, b = 1:3)
+tibble(a = 1:3, b = 1)
+tibble(a = 1:3, c = 1:2)
+tibble(a = 1, b = integer())
+tibble(a = integer(), b = 1)
+```
+---
+## Recycling
+
+This also extends to tibbles with *zero* rows, which is sometimes important for programming:
+```{r, error = TRUE}
+tibble(a = 1, b = integer())
+tibble(a = integer(), b = 1)
+```
+
+---
+class: center, middle, inverse
+
+# Data import!
+
+---
+# Three main packages of tidyverse for importing data
+
+- [readr](https://github.com/hadley/readr): delimited files
+- [readxl](https://github.com/hadley/readxl): Excel files (.xls and .xlsx)
+- [haven](https://github.com/hadley/haven): SPSS, Stata, SAS
+
+Some advantages:
+
+- Faster than alternatives
+- StringsAsFactors=FALSE by default.
+- Save the results as a tibble object.
+
+---
+# Reading data: readr
+
+The goal of readr is to provide a fast and friendly way to read rectangular data (like csv, tsv, and fwf)
+
+readr supports seven file formats with seven read_ functions:
+
+- read_csv(): comma separated (CSV) files
+- read_tsv(): tab separated files
+- read_delim(): general delimited files
+- read_fwf(): fixed width files
+- read_table(): tabular files where colums are separated by white-space.
+- read_log(): web log files
+
+An special case of read_delim is read_csv2() which uses ; for separators instead of ,.
+
+---
+# Reading data: readr
+```{r}
+#Example 
+#data with wine evaluations
+library(readr)
+data <- read_csv("data/winemag-data-130k-v2.csv")
+data
+```
+
+---
+# Reading data: readxl
+
+## Features
+
+* No external dependency on, e.g., Java or Perl.
+
+* Re-encodes non-ASCII characters to UTF-8.
+
+* Loads datetimes into POSIXct columns. Both Windows (1900) and Mac (1904) 
+  date specifications are processed correctly.
+
+* Discovers the minimal data rectangle and returns that, by default. User can exert more control with `range`, `skip`, and `n_max`.
+
+* Column names and types are determined from the data in the sheet, by default. User can also supply via `col_names` and `col_types`.
+
+* Returns a [tibble](http://tibble.tidyverse.org/reference/tibble.html), i.e. a data frame with an additional `tbl_df` class. Among other things, this provide nicer printing.
+
+---
+# Other relevant packages
+
+Here are some other packages with functionality that is complementary to readxl and that also avoid a Java dependency.
+
+* [openxlsx](https://CRAN.R-project.org/package=openxlsx) provides "a high level interface to writing, styling and editing worksheets".
+
+```{r eval = FALSE}
+l <- list(iris = iris, mtcars = mtcars, chickwts = chickwts, quakes = quakes)
+openxlsx::write.xlsx(l, file = "datasets.xlsx")
+```
+
+* [writexl](https://cran.r-project.org/package=writexl) It's a portable and lightweight way to export a data frame to xlsx, based on [libxlsxwriter](https://github.com/jmcnamara/libxlsxwriter). It is much more minimalistic than openxlsx, but on simple examples, appears to be about twice as fast and to write smaller files.
+
+* [tidyxl](https://cran.r-project.org/package=tidyxl) is focused on importing awkward and non-tabular data from Excel. It also "exposes cell content, position and formatting in a tidy structure for further manipulation".
+
+---
+class: center, middle, inverse
+
+# Data transformation
+
+---
+background-image: url(img/dplyr.jpg)
+
+---
+## Data manipulation with dplyr
+
+Following dplyr's github page, its main goals are:
+
+- Identify the most important data manipulation tools needed for data analysis and make them easy to use in R.
+
+- Provide blazing fast performance for in-memory data by writing key pieces of code in C++.
+
+- Use the same code interface to work with data no matter where it's stored, whether in a data frame, a data table or database.
+
+---
+## Support
+
+The key object in dplyr is a tibble, a representation of a tabular data structure. Currently dplyr supports:
+
+- tibbles
+- data frames
+- data tables
+- SQLite
+- PostgreSQL/Redshift
+- MySQL/MariaDB
+- Bigquery
+- MonetDB
+- Presto
+- data cubes with arrays (partial implementation)
+
+---
+## The main verbs
+
+- `select()`: selects a subset of variables
+- `filter()`: selects a subset of observations
+- `mutate()`: adds new variables
+- `summarise()`: reduces a group(s) to a smaller number of values (e.g., summary statistics)
+- `arrange()`: re-orders observations
+
+
+## Special cases
+- `rename()`: similar to `select()` but keeps all columns that you didn’t specifically mention
+- `transmute()`: similar to `mutate()` but drops all columns that you didn’t specifically mention
+
+---
+## Other verbs
+- `sample_n()` and `sample_frac()` to take random samples.
+- `distinct()`: returns distinct (unique) rows of a table
+- `slice()`: allows you to select rows by position. It includes positive integers and drops negative integers
+- `do()`: A generic function that applies any R function to specified groups in the data.
+
+With all these verbs you can use grouped operations with the function `group_by()`
+
+---
+## Multiple tables verbs
+
+dplyr implements the four most useful SQL joins:
+
+- `inner_join(x, y)`: matching x + y
+- `left_join(x, y)`: all x + matching y
+- `semi_join(x, y)`: all x with match in y
+- `anti_join(x, y)`: all x without match in y
+
+And provides methods for:
+
+- `intersect(x, y)`: all rows in both x and y
+- `union(x, y)`: rows in either x or y
+- `setdiff(x, y)`: rows in x, but not y
+
+---
+## Examples
+
+Let's play with our wine to show some examples of dplyr verbs
+
+```{r, cache=TRUE}
+View(data)
+```
+
+---
+## The select() verb:
+```{r}
+data %>% 
+  select(country, points, price, title:winery)
+```
+
+---
+## Special functions
+
+`select()` and `rename()` allows existing functions like `:` and `c`, or the use of special functions:
+  
+- `starts_with(x)`: names starts with x
+
+- `ends_with(x)`: names ends in x
+
+- `contains(x)`: selects all variables whose name contains x
+
+- `matches(x)`: selects all variables whose name matches the regular expression x
+
+- `num_range("x", 1:5, width = 2)`: selects all variables (numerically) from x01 to x05.
+
+- `one_of("x", "y", "z")`: selects variables provided in a character vector.
+
+- `everything()`: selects all variables.
+
+- To drop variables, use `-variable`
+
+---
+## Some examples with select()
+
+```{r}
+data <- data %>% 
+  select(-X1)
+data
+```
+
+---
+## Some examples with select()
+  
+```{r}
+data %>% 
+  select(country:points)
+```
+
+---
+## Some examples with select()
+
+```{r}
+data %>% 
+  select(starts_with("taster"))
+```
+
+---
+## Some examples with select()
+
+```{r}
+data %>% 
+  select(contains("twitter"))
+```
+
+---
+## How to change names
+Remember we have the following variables in our data
+```{r}
+names(data)
+```
+
+---
+## Renaming
+With `select()` we can rename variables but those not mentioned are dropped
+```{r}
+data %>% select(taster_twitter = taster_twitter_handle)
+```
+
+---
+## The rename() verb
+Using `rename()` we can keep all variables
+```{r}
+data %>% rename(taster_twitter = taster_twitter_handle)
+```
+
+---
+class: inverse, center, middle
+# By the way...
+
+---
+# Scoped variants
+
+### There are three kinds of scoped variants of dplyr verbs. 
+
+  
+- Verbs suffixed with _all() apply an operation on all variables.
+
+- Verbs suffixed with _at() apply an operation on a subset of variables specified with the quoting function vars(). This quoting function accepts tidyselect::vars_select() helpers like starts_with(). Instead of a vars() selection, you can also supply an integerish vector of column positions or a character vector of column names.
+
+- Verbs suffixed with _if() apply an operation on the subset of variables for which a predicate function returns TRUE. Instead of a predicate function, you can also supply a logical vector.
+
+---
+background-image: url(img/scoped.gif)
+
+---
+# Example
+```{r, warning=FALSE, message = FALSE}
+
+data %>% select_if(is_numeric)
+```
+
+---
+## The slice() verb
+
+```{r}
+data %>% 
+  select(country, title, points, price) %>% 
+  slice(1:5)
+```
+
+---
+## The arrange() verb
+  
+```{r}
+data %>% 
+  select(country, title, points, price) %>% 
+  slice(1:5) %>% 
+  arrange(-price)
+```
+
+---
+## The distinct() verb
+
+```{r}
+data %>% 
+  select(country, province) %>% 
+  distinct()
+```
+
+---
+## The mutate() verb
+
+We use `mutate` to modify a column.
+
+```{r}
+data <- data %>%
+  mutate(price_per_point = price/points, 
+         ppp2 = price_per_point*100) #Notice that we can apply sequential transformations 
+data %>% 
+  select(points, price, price_per_point, ppp2) %>% 
+  slice(1:5)
+```
+
+---
+## Equivalently, we can use the transmute() verb:
+
+```{r}
+data %>% 
+  transmute(price_per_point = price/points)
+```
+
+---
+## mutate example: Logical expressions
+
+```{r}
+data <- data %>% 
+  mutate(price_range = ifelse(price_per_point>mean(price_per_point, na.rm=T),"High","Low"))
+
+data %>%
+  select(price_range, price_per_point)
+```
+
+---
+## What if we want to transform more than one variable at a time?
+
+```{r}
+data %>% 
+  mutate_if(is.numeric, list(~./100)) %>% 
+  select_if(is.numeric)
+```
+
+---
+## The filter() verb
+
+```{r}
+data %>% 
+  filter(country=="Chile")
+```
+
+---
+## Chile is great, but how many possible options do we have?
+
+```{r}
+data %>% 
+  select(country) %>% 
+  distinct()
+```
+
+---
+## Or
+
+```{r}
+data %>% 
+  select(country) %>% 
+  arrange(country) %>% 
+  distinct() %>% 
+  pull()
+```
+
+---
+## or just
+```{r}
+data$country %>% unique()
+```
+
+---
+## The filter() verb
+
+```{r}
+data %>% 
+  filter(country == "Chile",
+         price_range == "High")
+```
+
+---
+## The filter() verb
+
+```{r}
+data %>% 
+  filter(country == "Chile",
+         price > 20)
+```
+
+---
+## The summarise() verb
+
+```{r}
+data %>% 
+  filter(country == "Chile",
+         price_range == "High") %>% 
+  summarise(price = mean(price, na.rm = T))
+```
+
+---
+## Grouped operations: group_by()
+
+```{r}
+data %>% 
+  group_by(country)
+```
+
+---
+## group_by() is useful when combined with the verbs:
+
+```{r}
+data %>% 
+  group_by(country) %>% 
+  summarise(mean_price = mean(price, na.rm = T))
+```
+
+*Exercise:* Filter out the rows where Country is missing and recalculate the group_by and mean.
+
+
+---
+## group by several variables:
+
+```{r}
+data %>% 
+  group_by(country, price_range) %>% 
+  summarise(mean_price = mean(price, na.rm = T))
+```
+
+---
+## Notice that with each aggregation we are ungrouping one level:
+
+```{r}
+data %>% 
+  group_by(country, province, region_1, region_2) %>% 
+  summarise(n=n()) %>% 
+  summarise(n=sum(n))
+  
+```
+
+---
+## Notice that with each aggregation we are ungrouping one level:
+
+```{r}
+data %>% 
+  group_by(country, province, region_1, region_2)%>% 
+  summarise(n=n()) %>% 
+  summarise(n=sum(n)) %>% 
+  summarise(n=sum(n)) %>% 
+  summarise(n = sum(n))
+```
+
+---
+## We can ungroup the data manually too:
+
+```{r, eval=FALSE}
+data %>% 
+  group_by(country, province, region_1, region_2)%>% 
+  summarise(n=n()) %>% 
+  ungroup() 
+```
+
+---
+## And speaking about n()
+
+As you saw before, `n()` allows to count the number of rows in a current group. There are related functions worth to know:
+
+* tally() is a convenient wrapper for summarise that will either call n() or sum(n) depending on whether you're tallying for the first time, or re-tallying. 
+* count() is similar but calls group_by() before and ungroup() after.
+* add_tally() adds a column "n" to a table based on the number of items within each existing group, 
+* add_count() is a shortcut that does the grouping as well. 
+
+---
+```{r}
+data %>% 
+  group_by(country, province, region_1, region_2)%>% 
+  tally()
+```
+
+---
+```{r}
+data %>% 
+  count(country, province, region_1, region_2)
+```
+
+---
+class: center, middle, inverse
+
+# Data tidying
+![](img/tidy.gif)
+
+---
+background-image: url(img/tidyr.jpg)
+
+---
+## Tidying data: tidyr
+
+`tidyr`: structuring datasets to facilitate analysis.
+
+Like families, tidy datasets are all alike but every messy dataset is messy in its own way.
+
+Tidy data:
+
+* Each variable must have its own column.
+* Each observation must have its own row.
+* Each value must have its own cell.
+
+---
+## tidyr
+
+Tidyr provides the following verbs:
+
+- Pivotting” which converts between long and wide forms: pivot_longer() and pivot_wider()
+
+- “Rectangling”, which turns deeply nested lists (as from JSON) into tidy tibbles: unnest_longer(), unnest_wider(), hoist(). Check vignette("rectangle") for more details.
+
+- Nesting converts grouped data to a form where each group becomes a single row containing a nested data frame, and unnesting does the opposite. See nest(), unnest(), and vignette("nest") for more details.
+
+- Splitting and combining character columns. Use separate() and extract() to pull a single character column into multiple columns; use unite() to combine multiple columns into a single character column.
+
+- Make implicit missing values explicit with complete(); make explicit missing values implicit with drop_na(); replace missing values with next/previous value with fill(), or a known value with replace_na().
+
+---
+# Pivotting
+
+There are two fundamental verbs of pivotting:
+
+- `pivot_longer()` takes multiple columns, and gathers them into key-value pairs: it makes "wide" data longer.
+
+- `pivot_wider()` takes two columns (key & value) and spreads in to multiple columns, it makes "long" data wider.
+
+---
+## tidyr example
+```{r, message=FALSE}
+library(tidyr)
+data %>% 
+  group_by(country, variety) %>% 
+  summarise(points = mean(points, na.rm = T))
+```
+
+---
+## tidyr example
+```{r, message=FALSE}
+data2 <- data %>% 
+  group_by(country, variety) %>% 
+  summarise(points = mean(points, na.rm = T)) %>% 
+  pivot_wider(names_from = variety, values_from = points)
+data2
+```
+
+---
+## And inversely
+```{r}
+data3 <- data2 %>% 
+  pivot_longer(-country, names_to = "variety", values_to = "points") #It also accepts select functions...
+data3
+```
+
+---
+## unite()
+```{r}
+data3 <- data3 %>% 
+  unite(country_variety, country, variety, remove=FALSE) 
+data3
+```
+
+---
+## separate()
+```{r}
+data3 %>% 
+  separate(country_variety, c("country", "variety"), sep = "_")
+```
+
+--
+What was the problem here? How to solve it?
+
+---
+## Other tidyr verbs:
+
+- `complete()` Complete a data frame with missing combinations of data.
+
+- `drop_na()` Drop rows containing missing values
+
+- `expand(), crossing(), nesting()` Expand data frame to include all combinations of values
+
+- `fill()` Fill in missing values.
+
+- `full_seq()` Create the full sequence of values in a vector.
+
+- `replace_na()` Replace missing values
+
+---
+class: center, middle, inverse
+
+# Useful resources
+
+---
+# Keep learning data preparation
+
+- [Tidyverse](https://www.tidyverse.org/)
+- [R for data Science](http://r4ds.had.co.nz/)
+
+- [R for data science Slack](https://rfordatascience.slack.com/)
+
+- [Tidy tuesday](https://github.com/rfordatascience/tidytuesday) [examples](https://twitter.com/search?q=%23TidyTuesday)
+
+---
+class: center, middle
+
+# Thank you and time for more practise!
+![](img/bye.gif)
+
